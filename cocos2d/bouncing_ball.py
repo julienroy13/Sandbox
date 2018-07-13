@@ -51,7 +51,7 @@ class BouncingBall(cocos.layer.Layer):
         self.velocity_x = 0.
         self.velocity_y = 0.
 
-        self.color = (255, 255, 255)
+        self.sprite.color = (255, 255, 255)
 
         self.gravity_ON = True
         self.gravity_direction = 'DOWN'
@@ -119,6 +119,11 @@ class BouncingBall(cocos.layer.Layer):
         # Checks if mouse is in the circle
         if ((x - self.sprite.x)**2 + (y - self.sprite.y)**2 < (self.sprite.width//2)**2):
             self.update_ball_position(dx, dy, new_dx=dx, new_dy=dy)
+            self.sprite.color = (120, 120, 120)
+        else:
+            self.sprite.color = (255, 255, 255)
+
+        # TODO : Handle color change more intelligently
 
 
 class EditLayer(cocos.layer.Layer):
