@@ -57,7 +57,7 @@ class BouncingBall(cocos.layer.Layer):
         self.gravity_direction = 'DOWN'
         self.gravity_force = args.gravity_force
 
-        self.is_holded = False
+        self.is_held = False
 
     def update_ball_position(self, dx, dy, new_dx=None, new_dy=None):
         new_position_x = self.sprite.x + dx
@@ -86,7 +86,7 @@ class BouncingBall(cocos.layer.Layer):
 
     # EVENT HANDLERS
     def on_mouse_release(self, x, y, buttons, modifiers):
-        self.is_holded = False
+        self.is_held = False
 
     def on_mouse_press(self, x, y, buttons, modifiers):
         """This function is called when any mouse button is pressed
@@ -96,7 +96,7 @@ class BouncingBall(cocos.layer.Layer):
         """
         # Checks if mouse is in the circle
         if ((x - self.sprite.x)**2 + (y - self.sprite.y)**2 < (self.sprite.width // 2)**2):
-            self.is_holded = True
+            self.is_held = True
 
 
     def on_key_press(self, key, modifiers):
@@ -131,7 +131,7 @@ class BouncingBall(cocos.layer.Layer):
         'buttons' is a bitwise-or of pyglet.window.mouse constants LEFT, MIDDLE, RIGHT
         'modifiers' is a bitwise-or of pyglet.window.key modifier constants (values like 'SHIFT', 'OPTION', 'ALT')
         """
-        if self.is_holded:
+        if self.is_held:
             self.update_ball_position(dx, dy, new_dx=dx, new_dy=dy)
 
 
@@ -149,13 +149,13 @@ class EditLayer(cocos.layer.Layer):
         super().on_enter()
 
     def update(self, dt):
-        if self.ball.is_holded:
+        if self.ball.is_held:
             self.ball.sprite.color = (120, 120, 120)
         else:
             self.ball.sprite.color = (255, 255, 255)
 
         # If the ball is holded, gravity does not affect it
-        if self.ball.is_holded:
+        if self.ball.is_held:
             self.ball.update_ball_position(0, 0, 0, 0)
         else:
             # At every frame update, the ball gains velocity in the negative direction of y
