@@ -57,6 +57,8 @@ class BouncingBall(cocos.layer.Layer):
         self.gravity_direction = 'DOWN'
         self.gravity_force = args.gravity_force
 
+        self.is_holded = False
+
     def update_ball_position(self, dx, dy, new_dx=None, new_dy=None):
         new_position_x = self.sprite.x + dx
         new_position_y = self.sprite.y + dy
@@ -83,6 +85,20 @@ class BouncingBall(cocos.layer.Layer):
 
 
     # EVENT HANDLERS
+    def on_mouse_release(self, x, y, buttons, modifiers):
+        self.is_holded = False
+
+    def on_mouse_press(self, x, y, buttons, modifiers):
+        """This function is called when any mouse button is pressed
+        (x, y) are the physical coordinates of the mouse
+        'buttons' is a bitwise-or of pyglet.window.mouse constants LEFT, MIDDLE, RIGHT
+        'modifiers' is a bitwise-or of pyglet.window.key modifier constants(values like 'SHIFT', 'OPTION', 'ALT')
+        """
+        # Checks if mouse is in the circle
+        if ((x - self.sprite.x)**2 + (y - self.sprite.y)**2 < (self.sprite.width // 2)**2):
+            self.is_holded = True
+
+
     def on_key_press(self, key, modifiers):
         """This function is called when a key is pressed.
         'key' is a constant indicating which key was pressed.
@@ -115,15 +131,8 @@ class BouncingBall(cocos.layer.Layer):
         'buttons' is a bitwise-or of pyglet.window.mouse constants LEFT, MIDDLE, RIGHT
         'modifiers' is a bitwise-or of pyglet.window.key modifier constants (values like 'SHIFT', 'OPTION', 'ALT')
         """
-
-        # Checks if mouse is in the circle
-        if ((x - self.sprite.x)**2 + (y - self.sprite.y)**2 < (self.sprite.width//2)**2):
+        if self.is_holded:
             self.update_ball_position(dx, dy, new_dx=dx, new_dy=dy)
-            self.sprite.color = (120, 120, 120)
-        else:
-            self.sprite.color = (255, 255, 255)
-
-        # TODO : Handle color change more intelligently
 
 
 class EditLayer(cocos.layer.Layer):
@@ -140,19 +149,28 @@ class EditLayer(cocos.layer.Layer):
         super().on_enter()
 
     def update(self, dt):
-        # At every frame update, the ball gains velocity in the negative direction of y
-        if self.ball.gravity_ON:
-            if self.ball.gravity_direction == 'DOWN':
-                self.ball.velocity_y -= self.ball.gravity_force
-            elif self.ball.gravity_direction == 'UP':
-                self.ball.velocity_y += self.ball.gravity_force
-            elif self.ball.gravity_direction == 'LEFT':
-                self.ball.velocity_x -= self.ball.gravity_force
-            elif self.ball.gravity_direction == 'RIGHT':
-                self.ball.velocity_x += self.ball.gravity_force
-            else:
-                raise ValueError(f'Unsupported gravity_direction : {self.ball.gravity_direction}')
-        self.ball.update_ball_position(dx=self.ball.velocity_x, dy=self.ball.velocity_y)
+        if self.ball.is_holded:
+            self.ball.sprite.color = (120, 120, 120)
+        else:
+            self.ball.sprite.color = (255, 255, 255)
+
+        # If the ball is holded, gravity does not affect it
+        if self.ball.is_holded:
+            self.ball.update_ball_position(0, 0, 0, 0)
+        else:
+            # At every frame update, the ball gains velocity in the negative direction of y
+            if self.ball.gravity_ON:
+                if self.ball.gravity_direction == 'DOWN':
+                    self.ball.velocity_y -= self.ball.gravity_force
+                elif self.ball.gravity_direction == 'UP':
+                    self.ball.velocity_y += self.ball.gravity_force
+                elif self.ball.gravity_direction == 'LEFT':
+                    self.ball.velocity_x -= self.ball.gravity_force
+                elif self.ball.gravity_direction == 'RIGHT':
+                    self.ball.velocity_x += self.ball.gravity_force
+                else:
+                    raise ValueError(f'Unsupported gravity_direction : {self.ball.gravity_direction}')
+            self.ball.update_ball_position(dx=self.ball.velocity_x, dy=self.ball.velocity_y)
 
 
 def args_check(args):
