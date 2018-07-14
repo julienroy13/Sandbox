@@ -7,7 +7,7 @@ import logging
 
 DEFAULT_WIDTH = 1280
 DEFAULT_HEIGHT = 720
-DEFAULT_GRAVITY_FORCE = 0.2
+
 
 class Background(cocos.layer.ColorLayer):
     # If you want that your layer receives director.window events, you must set this variable to 'True'
@@ -21,10 +21,13 @@ class Background(cocos.layer.ColorLayer):
         label = cocos.text.Label(
             'Bouncing Ball',
             font_name='Calibri',
-            font_size=32,
+            bold=True,
+            font_size=90,
             anchor_x='center', anchor_y='center',
-            position=((320, 240))
+            position=((420, 240))
         )
+
+        label.opacity = 100
 
         # Adds the label (which is a subclass of CocosNode) as a child of our layer node
         self.add(label)
@@ -34,17 +37,18 @@ class BouncingBall(cocos.layer.Layer):
     # If you want that your layer receives director.window events, you must set this variable to 'True'
     is_event_handler = True
 
-    def __init__(self, args):
+    def __init__(self):
         super().__init__()
 
         # Creates a sprite
         self.sprite = cocos.sprite.Sprite('assets/ball.png')
-        self.sprite.position = 500, 500  # arbitrary
-        self.sprite.scale = 0.3          # arbitrary
+        self.sprite.position = 1000, 600
+        self.sprite.scale = 0.3
 
         # Adds the sprite to our layer (z is its position in an axis coming out of the screen)
         self.add(self.sprite, z=1)
 
+        # Properties TODO : separate world properties and sprite properties
         self.window_width = args.width
         self.window_height = args.height
 
@@ -55,9 +59,39 @@ class BouncingBall(cocos.layer.Layer):
 
         self.gravity_ON = True
         self.gravity_direction = 'DOWN'
-        self.gravity_force = args.gravity_force
+        self.gravity_strength = 0.2
 
         self.is_held = False
+
+        # Creates text labels
+        self.gravity_text = cocos.text.Label(f"Gravity ON", font_size=20, x=20, y=680, bold=True)
+        self.direction_text = cocos.text.Label(f"  Direction: {self.gravity_direction}", font_size=14, x=20, y=660)
+        self.strength_text = cocos.text.Label(f"  Strength: {self.gravity_strength}", font_size=14, x=20, y=640)
+
+        self.gravity_text.opacity = 150
+        self.direction_text.opacity = 150
+        self.strength_text.opacity = 150
+
+        # Adds the labels (which are a subclass of CocosNode) as a child of our layer node
+        self.add(self.gravity_text)
+        self.add(self.direction_text)
+        self.add(self.strength_text)
+
+
+    def update_text(self):
+        gravity_text = "Gravity ON" if self.gravity_ON else 'Gravity OFF'
+
+        if self.gravity_ON:
+            direction_text = f"  Direction: {self.gravity_direction}"
+            strength_text = f"  Strength: {self.gravity_strength:.1f}"
+        else:
+            direction_text = ""
+            strength_text = ""
+
+        # Update text
+        self.gravity_text.element.text = gravity_text
+        self.direction_text.element.text = direction_text
+        self.strength_text.element.text = strength_text
 
     def update_ball_position(self, dx, dy, new_dx=None, new_dy=None):
         new_position_x = self.sprite.x + dx
@@ -83,7 +117,6 @@ class BouncingBall(cocos.layer.Layer):
         if new_dy is not None:
             self.velocity_y = new_dy
 
-
     # EVENT HANDLERS
     def on_mouse_release(self, x, y, buttons, modifiers):
         self.is_held = False
@@ -98,7 +131,6 @@ class BouncingBall(cocos.layer.Layer):
         if ((x - self.sprite.x)**2 + (y - self.sprite.y)**2 < (self.sprite.width // 2)**2):
             self.is_held = True
 
-
     def on_key_press(self, key, modifiers):
         """This function is called when a key is pressed.
         'key' is a constant indicating which key was pressed.
@@ -112,6 +144,14 @@ class BouncingBall(cocos.layer.Layer):
             logging.info(f'{key_name}-key has been pushed. Gravity is now oriented towards {self.gravity_direction}')
             self.gravity_direction = key_name
 
+        # Plus and Minus keys are used to control gravity strength
+        if key_name == 'NUM_ADD':
+            self.gravity_strength += 0.1
+
+        if key_name == 'NUM_SUBTRACT':
+            if self.gravity_strength > 0.05:
+                self.gravity_strength -= 0.1
+
         # Space-bar key turns off/on the gravity
         if key_name == 'SPACE':
             logging.info(f'SPACE-key has been pushed. Gravity is now {self.gravity_ON}')
@@ -123,6 +163,7 @@ class BouncingBall(cocos.layer.Layer):
             self.velocity_x = 0.
             self.velocity_y = 0.
 
+        self.update_text()
 
     def on_mouse_drag(self, x, y, dx, dy, buttons, modifiers):
         """Called when the mouse moves over the app window with some button(s) pressed
@@ -161,13 +202,13 @@ class EditLayer(cocos.layer.Layer):
             # At every frame update, the ball gains velocity in the negative direction of y
             if self.ball.gravity_ON:
                 if self.ball.gravity_direction == 'DOWN':
-                    self.ball.velocity_y -= self.ball.gravity_force
+                    self.ball.velocity_y -= self.ball.gravity_strength
                 elif self.ball.gravity_direction == 'UP':
-                    self.ball.velocity_y += self.ball.gravity_force
+                    self.ball.velocity_y += self.ball.gravity_strength
                 elif self.ball.gravity_direction == 'LEFT':
-                    self.ball.velocity_x -= self.ball.gravity_force
+                    self.ball.velocity_x -= self.ball.gravity_strength
                 elif self.ball.gravity_direction == 'RIGHT':
-                    self.ball.velocity_x += self.ball.gravity_force
+                    self.ball.velocity_x += self.ball.gravity_strength
                 else:
                     raise ValueError(f'Unsupported gravity_direction : {self.ball.gravity_direction}')
             self.ball.update_ball_position(dx=self.ball.velocity_x, dy=self.ball.velocity_y)
@@ -185,9 +226,6 @@ def args_check(args):
     if args.height < 50 or args.height > 1000:
         raise ValueError(f'Parameter "args.height" should be between 50 and 1000. Got {args.height} instead')
 
-    if args.gravity_force < 0.05 or args.gravity_force > 1.:
-        raise ValueError(f'Parameter "args.gravity_force" should be between 0.05 and 1. Got {args.gravity_force} instead')
-
     return args
 
 
@@ -202,7 +240,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--width', default=DEFAULT_WIDTH)
     parser.add_argument('--height', default=DEFAULT_HEIGHT)
-    parser.add_argument('--gravity_force', default=DEFAULT_GRAVITY_FORCE)
     args = args_check(parser.parse_args())
 
     # Initializes the director (whatever this does)
@@ -210,7 +247,7 @@ if __name__ == '__main__':
 
     # Instantiates our layer and creates a scene that contains our layer as a child
     background = Background()
-    ball = BouncingBall(args)
+    ball = BouncingBall()
     editor = EditLayer(ball)
     main_scene = cocos.scene.Scene(background, ball, editor)
 
