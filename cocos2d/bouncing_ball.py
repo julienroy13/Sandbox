@@ -10,8 +10,6 @@ DEFAULT_HEIGHT = 720
 
 
 class Background(cocos.layer.ColorLayer):
-    # If you want that your layer receives director.window events, you must set this variable to 'True'
-    is_event_handler = True
 
     def __init__(self):
         # blueish color
@@ -33,35 +31,65 @@ class Background(cocos.layer.ColorLayer):
         self.add(label)
 
 
-class BouncingBall(cocos.layer.Layer):
-    # If you want that your layer receives director.window events, you must set this variable to 'True'
-    is_event_handler = True
+class BouncingBall(cocos.sprite.Sprite):
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, args):
+        super().__init__('assets/ball.png')
 
-        # Creates a sprite
-        self.sprite = cocos.sprite.Sprite('assets/ball.png')
-        self.sprite.position = 1000, 600
-        self.sprite.scale = 0.3
+        # Sprite's properties
+        self.position = 1000, 600
+        self.scale = 0.3
+        self.color = (255, 255, 255)
 
-        # Adds the sprite to our layer (z is its position in an axis coming out of the screen)
-        self.add(self.sprite, z=1)
-
-        # Properties TODO : separate world properties and sprite properties
-        self.window_width = args.width
-        self.window_height = args.height
-
+        # Physics properties
         self.velocity_x = 0.
         self.velocity_y = 0.
 
-        self.sprite.color = (255, 255, 255)
+        self.is_held = False
+
+        self.args = args
+
+    def update_position(self, dx, dy, new_velocity_x=None, new_velocity_y=None):
+        new_position_x = self.x + dx
+        new_position_y = self.y + dy
+
+        # If the ball movement keeps it inside the screen, the ball's position is updated
+        if new_position_x - self.width//2 > 0 and new_position_x + self.width//2 < self.args.width:
+            self.x += dx
+        else:
+            # Else, the ball bounces
+            self.velocity_x = -0.8 * self.velocity_x
+
+        # ... same for y
+        if new_position_y - self.height//2 > 0 and new_position_y + self.height//2 < self.args.height:
+            self.y += dy
+        else:
+            self.velocity_y = -0.8 * self.velocity_y
+
+        # If a new speed is provided, the ball's speed is updated
+        if new_velocity_x is not None:
+            self.velocity_x = new_velocity_x
+
+        if new_velocity_y is not None:
+            self.velocity_y = new_velocity_y
+
+
+class EditLayer(cocos.layer.Layer):
+    is_event_handler = True
+    # TODO : take into account the world coordinates vs window coordinates
+    def __init__(self, ball, args):
+        super().__init__()
+
+        # Reference to sprites
+        self.ball = ball
+
+        # World properties
+        self.window_width = args.width
+        self.window_height = args.height
 
         self.gravity_ON = True
         self.gravity_direction = 'DOWN'
         self.gravity_strength = 0.2
-
-        self.is_held = False
 
         # Creates text labels
         self.gravity_text = cocos.text.Label(f"Gravity ON", font_size=20, x=20, y=680, bold=True)
@@ -77,6 +105,35 @@ class BouncingBall(cocos.layer.Layer):
         self.add(self.direction_text)
         self.add(self.strength_text)
 
+        self.schedule(self.update)
+
+    def on_enter(self):
+        super().on_enter()
+
+    def update(self, dt):
+        """This is called right before the frame update (so this is where we want to do our physics update)"""
+        if self.ball.is_held:
+            self.ball.color = (120, 120, 120)
+        else:
+            self.ball.color = (255, 255, 255)
+
+        # If the ball is held, gravity does not affect it
+        if self.ball.is_held:
+            self.ball.update_position(dx=0, dy=0, new_velocity_x=0, new_velocity_y=0)
+        else:
+            # At every frame update, the ball gains velocity in the direction of the gravity
+            if self.gravity_ON:
+                if self.gravity_direction == 'DOWN':
+                    self.ball.velocity_y -= self.gravity_strength
+                elif self.gravity_direction == 'UP':
+                    self.ball.velocity_y += self.gravity_strength
+                elif self.gravity_direction == 'LEFT':
+                    self.ball.velocity_x -= self.gravity_strength
+                elif self.gravity_direction == 'RIGHT':
+                    self.ball.velocity_x += self.gravity_strength
+                else:
+                    raise ValueError(f'Unsupported gravity_direction : {self.gravity_direction}')
+            self.ball.update_position(dx=self.ball.velocity_x, dy=self.ball.velocity_y)
 
     def update_text(self):
         gravity_text = "Gravity ON" if self.gravity_ON else 'Gravity OFF'
@@ -93,33 +150,9 @@ class BouncingBall(cocos.layer.Layer):
         self.direction_text.element.text = direction_text
         self.strength_text.element.text = strength_text
 
-    def update_ball_position(self, dx, dy, new_dx=None, new_dy=None):
-        new_position_x = self.sprite.x + dx
-        new_position_y = self.sprite.y + dy
-
-        # If the ball movement keeps it inside the screen, the ball's position is updated
-        if new_position_x - self.sprite.width//2 > 0 and new_position_x + self.sprite.width//2 < self.window_width:
-            self.sprite.x += dx
-        else:
-            # Else, the ball bounces
-            self.velocity_x = -0.8 * self.velocity_x
-
-        # ... same for y
-        if new_position_y - self.sprite.height//2 > 0 and new_position_y + self.sprite.height//2 < self.window_height:
-            self.sprite.y += dy
-        else:
-            self.velocity_y = -0.8 * self.velocity_y
-
-        # If a new speed is provided, the ball's speed is updated
-        if new_dx is not None:
-            self.velocity_x = new_dx
-
-        if new_dy is not None:
-            self.velocity_y = new_dy
-
     # EVENT HANDLERS
     def on_mouse_release(self, x, y, buttons, modifiers):
-        self.is_held = False
+        self.ball.is_held = False
 
     def on_mouse_press(self, x, y, buttons, modifiers):
         """This function is called when any mouse button is pressed
@@ -128,8 +161,8 @@ class BouncingBall(cocos.layer.Layer):
         'modifiers' is a bitwise-or of pyglet.window.key modifier constants(values like 'SHIFT', 'OPTION', 'ALT')
         """
         # Checks if mouse is in the circle
-        if ((x - self.sprite.x)**2 + (y - self.sprite.y)**2 < (self.sprite.width // 2)**2):
-            self.is_held = True
+        if ((x - self.ball.x) ** 2 + (y - self.ball.y) ** 2 < (self.ball.width // 2) ** 2):
+            self.ball.is_held = True
 
     def on_key_press(self, key, modifiers):
         """This function is called when a key is pressed.
@@ -141,7 +174,8 @@ class BouncingBall(cocos.layer.Layer):
 
         # Arrows keys select the orientation of the gravity
         if key_name in ['LEFT', 'RIGHT', 'DOWN', 'UP']:
-            logging.info(f'{key_name}-key has been pushed. Gravity is now oriented towards {self.gravity_direction}')
+            logging.info(
+                f'{key_name}-key has been pushed. Gravity is now oriented towards {self.gravity_direction}')
             self.gravity_direction = key_name
 
         # Plus and Minus keys are used to control gravity strength
@@ -160,8 +194,8 @@ class BouncingBall(cocos.layer.Layer):
         # Enter key sets the ball speed to zero
         if key_name == 'ENTER':
             logging.info(f"ENTER-key has been pushed. Ball's speed has been reset")
-            self.velocity_x = 0.
-            self.velocity_y = 0.
+            self.ball.velocity_x = 0.
+            self.ball.velocity_y = 0.
 
         self.update_text()
 
@@ -172,46 +206,8 @@ class BouncingBall(cocos.layer.Layer):
         'buttons' is a bitwise-or of pyglet.window.mouse constants LEFT, MIDDLE, RIGHT
         'modifiers' is a bitwise-or of pyglet.window.key modifier constants (values like 'SHIFT', 'OPTION', 'ALT')
         """
-        if self.is_held:
-            self.update_ball_position(dx, dy, new_dx=dx, new_dy=dy)
-
-
-class EditLayer(cocos.layer.Layer):
-    # is_event_handler = True
-    # TODO : take into account the world coordinates vs window coordinates
-    def __init__(self, ball):
-        super().__init__()
-
-        self.ball = ball
-
-        self.schedule(self.update)
-
-    def on_enter(self):
-        super().on_enter()
-
-    def update(self, dt):
         if self.ball.is_held:
-            self.ball.sprite.color = (120, 120, 120)
-        else:
-            self.ball.sprite.color = (255, 255, 255)
-
-        # If the ball is holded, gravity does not affect it
-        if self.ball.is_held:
-            self.ball.update_ball_position(0, 0, 0, 0)
-        else:
-            # At every frame update, the ball gains velocity in the negative direction of y
-            if self.ball.gravity_ON:
-                if self.ball.gravity_direction == 'DOWN':
-                    self.ball.velocity_y -= self.ball.gravity_strength
-                elif self.ball.gravity_direction == 'UP':
-                    self.ball.velocity_y += self.ball.gravity_strength
-                elif self.ball.gravity_direction == 'LEFT':
-                    self.ball.velocity_x -= self.ball.gravity_strength
-                elif self.ball.gravity_direction == 'RIGHT':
-                    self.ball.velocity_x += self.ball.gravity_strength
-                else:
-                    raise ValueError(f'Unsupported gravity_direction : {self.ball.gravity_direction}')
-            self.ball.update_ball_position(dx=self.ball.velocity_x, dy=self.ball.velocity_y)
+            self.ball.update_position(dx, dy, new_velocity_x=dx, new_velocity_y=dy)
 
 
 def args_check(args):
@@ -230,12 +226,6 @@ def args_check(args):
 
 
 if __name__ == '__main__':
-    # Basic logging
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
-                        datefmt='%d/%m/%Y %H:%M:%S'
-                        )
-
     # Parse args
     parser = argparse.ArgumentParser()
     parser.add_argument('--width', default=DEFAULT_WIDTH)
@@ -247,8 +237,8 @@ if __name__ == '__main__':
 
     # Instantiates our layer and creates a scene that contains our layer as a child
     background = Background()
-    ball = BouncingBall()
-    editor = EditLayer(ball)
+    ball = BouncingBall(args)
+    editor = EditLayer(ball, args)
     main_scene = cocos.scene.Scene(background, ball, editor)
 
     # We run our scene
