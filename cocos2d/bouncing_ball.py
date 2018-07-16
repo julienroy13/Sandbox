@@ -76,7 +76,7 @@ class BouncingBall(cocos.sprite.Sprite):
 
 class EditLayer(cocos.layer.Layer):
     is_event_handler = True
-    # TODO : take into account the world coordinates vs window coordinates
+    # TODO : take into account the world coordinates vs window coordinates for ball dragging
     def __init__(self, ball, args):
         super().__init__()
 
@@ -161,6 +161,7 @@ class EditLayer(cocos.layer.Layer):
         'modifiers' is a bitwise-or of pyglet.window.key modifier constants(values like 'SHIFT', 'OPTION', 'ALT')
         """
         # Checks if mouse is in the circle
+        x, y = cocos.director.director.get_virtual_coordinates(x, y)
         if ((x - self.ball.x) ** 2 + (y - self.ball.y) ** 2 < (self.ball.width // 2) ** 2):
             self.ball.is_held = True
 
@@ -207,6 +208,7 @@ class EditLayer(cocos.layer.Layer):
         'modifiers' is a bitwise-or of pyglet.window.key modifier constants (values like 'SHIFT', 'OPTION', 'ALT')
         """
         if self.ball.is_held:
+            dx, dy = cocos.director.director.get_virtual_coordinates(dx, dy)
             self.ball.update_position(dx, dy, new_velocity_x=dx, new_velocity_y=dy)
 
 
