@@ -32,7 +32,9 @@ class Restaurant(multiprocessing.Process):
         self.logger = create_logger('RESTAURANT', self.log_level, os.path.join('logs', 'RESTAURANT.log'))
         self.logger.info("Process initiated.")
         while not self.exit.is_set():
-            self.work()
+            try:
+                self.work()
+            except KeyboardInterrupt: pass
         self.logger.info("Shutting down.")
 
     def shutdown(self):
@@ -78,7 +80,9 @@ class Cook(multiprocessing.Process):
         self.logger = create_logger(self.name.upper(), self.log_level, os.path.join('logs', f'{self.name.upper()}.log'))
         self.logger.info("Process initiated.")
         while not self.exit.is_set():
-            self.work()
+            try:
+                self.work()
+            except KeyboardInterrupt: pass  # TODO : Could that cause problems? Is that the best way to do it?
         self.logger.info("Shutting down.")
 
     def shutdown(self):
@@ -126,7 +130,9 @@ class Client(multiprocessing.Process):
         self.logger = create_logger(self.name.upper(), self.log_level, os.path.join('logs', f'{self.name.upper()}.log'))
         self.logger.info("Process initiated.")
         while not self.exit.is_set():
-            self.eat()
+            try:
+                self.eat()
+            except KeyboardInterrupt: pass
         self.logger.info("Shutting down.")
 
     def shutdown(self):
@@ -250,6 +256,8 @@ if __name__ == '__main__':
     # Create table folder if it doesnt exists
     if not os.path.exists('table'):
         os.mkdir('table')
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
 
     # .. or delete food if it does
     else:
@@ -260,7 +268,7 @@ if __name__ == '__main__':
     # Parse args
     args = get_args()
 
-    # Create base logger
+    # Create logger for master process
     master_logger = create_logger('MASTER', args.loglevel, os.path.join('logs', 'MASTER.log'))
 
     # Create queues
@@ -296,8 +304,7 @@ if __name__ == '__main__':
         try:
             # Check if some processes are dead
             for process in all_processes:
-                is_alive = process.is_alive()
-                if is_alive:
+                if process.is_alive():
                     master_logger.debug('{process.name} is still alive.')
                 else:
                     master_logger.debug('{process.name} has crashed.')
@@ -319,17 +326,24 @@ if __name__ == '__main__':
             time.sleep(3)
 
         except KeyboardInterrupt:
-            master_logger.info("KEYBOARD INTERRUPT")
+            master_logger.info("Catched a KEYBOARD INTERRUPT")
             break
 
     master_logger.info('Out of the main loop.')
+
+    # Waits for all processes to shutdown
     shutdown_processes(master_logger, all_processes)
+
+    while any([p.is_alive() for p in all_processes]):
+        master_logger.info([p.is_alive() for p in all_processes])
+        time.sleep(2)
 
     # Without the calls below the process may hang while waiting for queues to be flushed
     master_logger.info('Ensuring queues do not prevent the process from exiting')
     for the_q in kitchen_queues:
         the_q.cancel_join_thread()
 
+    master_logger.info('Everything done. Shutting down.')
 
 
 
