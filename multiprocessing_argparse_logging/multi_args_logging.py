@@ -241,7 +241,7 @@ def create_logger(name, loglevel, logfile):
     logger = logging.getLogger(name)
     logger.setLevel(loglevel)
     formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - {} - %(message)s'.format(name),
-                                  datefmt='%m/%d/%Y %H:%M:%S',)
+                                  datefmt='%d/%m/%Y %H:%M:%S',)
     for handler in [logging.FileHandler(logfile, mode='w'), logging.StreamHandler(stream=sys.stdout)]:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
