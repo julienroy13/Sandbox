@@ -29,22 +29,21 @@ class MovingCircle(object):
     def draw(self):
         draw_full_circle(self.x, self.y, self.radius)
 
-    def update_position(self, t):
+    def update_position(self):
         # TODO: encode position of ball in a "droite paramétrique" instead
-        new_x = self.x + self.vx * t
-        new_y = self.y + self.vy * t
+        new_x = self.x + self.vx
+        new_y = self.y + self.vy
 
-        if new_x < self.end1_x or new_x > self.end2_x:
+        if new_x < min(self.end1_x, self.end2_x) or new_x > max(self.end1_x, self.end2_x):
             self.vx *= -1.
-            new_x = self.x + self.vx * t
+            new_x = self.x + self.vx
 
-        if new_y < self.end1_y or new_y > self.end2_y:
+        if new_y < min(self.end1_y, self.end2_y) or new_y > max(self.end1_y, self.end2_y):
             self.vy *= -1.
-            new_y = self.y + self.vy * t
+            new_y = self.y + self.vy
 
         self.x = new_x
         self.y = new_y
-        print(self.x)
 
 
 
@@ -96,6 +95,10 @@ if __name__ == "__main__":
     # creates window
     window = pyglet.window.Window(width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
 
+    # creates the moving balls
+    angles = [0., 22.5, 45., 67.5, 90., 112.5, 135., 157.5]
+    balls = [MovingCircle(WINDOW_WIDTH / 2., WINDOW_HEIGHT / 2., radius=15., traj_angle=angle)
+             for i, angle in enumerate(angles)]
 
     @window.event
     def on_draw():
@@ -108,14 +111,13 @@ if __name__ == "__main__":
 
         # draws the moving circles
         glColor3f(1., 1., 1.)
-        circle1 = MovingCircle(x0=WINDOW_WIDTH / 2., y0=WINDOW_HEIGHT / 2., radius=15., traj_angle=67.5)
-        circle1.update_position(t)
-        circle1.draw()
+        for ball in balls:
+            ball.update_position()
+            ball.draw()
 
         # draws the bars
         glColor3f(0., 0., 0.)
         bar_width = 0.1
-        angles = [0., 22.5, 45., 67.5, 90., 112.5, 135., 157.5]
         for angle in angles:
             draw_full_rectangle(WINDOW_WIDTH, width=bar_width, angle=angle)
 
