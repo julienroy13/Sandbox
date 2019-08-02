@@ -1,50 +1,49 @@
 from pyglet.gl import *
 from math import pi, sin, cos
+import numpy as np
+from scipy.linalg import norm
 
 WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 500
 
+def rad(angle_degree):
+    return angle_degree * pi / 180.
 
 class MovingCircle(object):
 
     def __init__(self, x0, y0, radius, traj_angle,
                  traj_center_x=WINDOW_WIDTH/2., traj_center_y=WINDOW_HEIGHT/2., traj_length=WINDOW_WIDTH):
-        self.x = x0
-        self.y = y0
+        self.p = np.array([x0, y0])
         self.radius = radius
 
-        self.traj_center_x = traj_center_x
-        self.traj_center_y = traj_center_y
+        self.traj_center = np.array([traj_center_x, traj_center_y])
         self.traj_angle = traj_angle
         self.traj_length = traj_length
 
-        self.end1_x = self.traj_center_x - ((self.traj_length / 2.) - self.radius) * cos(self.traj_angle * pi / 180.)
-        self.end1_y = self.traj_center_y - ((self.traj_length / 2.) - self.radius) * sin(self.traj_angle * pi / 180.)
-        self.end2_x = self.traj_center_x + ((self.traj_length / 2.) - self.radius) * cos(self.traj_angle * pi / 180.)
-        self.end2_y = self.traj_center_y + ((self.traj_length / 2.) - self.radius) * sin(self.traj_angle * pi / 180.)
+        half_length = self.traj_length / 2. - self.radius
+        self.end1 = np.array([self.traj_center[0] - half_length * cos(rad(self.traj_angle)),
+                              self.traj_center[1] - half_length * sin(rad(self.traj_angle))])
 
-        self.vx = (self.end2_x - self.end1_x) / 100.
-        self.vy = (self.end2_y - self.end1_y) / 100.
+        self.end2 = np.array([self.traj_center[0] + half_length * cos(rad(self.traj_angle)),
+                              self.traj_center[1] + half_length * sin(rad(self.traj_angle))])
+
+        self.v = (self.end2 - self.end1) / 100.
+        print()
 
     def draw(self):
-        draw_full_circle(self.x, self.y, self.radius)
+        draw_full_circle(int(self.p[0]), int(self.p[1]), self.radius)
 
     def update_position(self):
-        # TODO: encode position of ball in a "droite paramétrique" instead
-        new_x = self.x + self.vx
-        new_y = self.y + self.vy
+        new_p = self.p + self.v
 
-        if new_x < min(self.end1_x, self.end2_x) or new_x > max(self.end1_x, self.end2_x):
-            self.vx *= -1.
-            new_x = self.x + self.vx
+        if new_p[0] < min(self.end1[0], self.end2[0]) \
+        or new_p[0] > max(self.end1[0], self.end2[0]) \
+        or new_p[1] < min(self.end1[1], self.end2[1]) \
+        or new_p[1] > max(self.end1[1], self.end2[1]):
+            self.v *= -1.
+            new_p = self.p + self.v
 
-        if new_y < min(self.end1_y, self.end2_y) or new_y > max(self.end1_y, self.end2_y):
-            self.vy *= -1.
-            new_y = self.y + self.vy
-
-        self.x = new_x
-        self.y = new_y
-
+        self.p = new_p
 
 
 def draw_full_circle(x, y, radius):
@@ -70,17 +69,17 @@ def draw_full_circle(x, y, radius):
 def draw_full_rectangle(length, width, angle):
     pyglet.graphics.draw(4, pyglet.gl.GL_QUADS, ('v2f', [
         # point 1
-        (WINDOW_WIDTH / 2.) - length * cos((angle - width) * pi / 180.),
-        (WINDOW_WIDTH / 2.) - length * sin((angle - width) * pi / 180.),
+        (WINDOW_WIDTH / 2.) - length * cos(rad(angle - width)),
+        (WINDOW_WIDTH / 2.) - length * sin(rad(angle - width)),
         # point 2
-        (WINDOW_WIDTH / 2.) - length * cos((angle + width) * pi / 180.),
-        (WINDOW_WIDTH / 2.) - length * sin((angle + width) * pi / 180.),
+        (WINDOW_WIDTH / 2.) - length * cos(rad(angle + width)),
+        (WINDOW_WIDTH / 2.) - length * sin(rad(angle + width)),
         # point 3
-        (WINDOW_WIDTH / 2.) + length * cos((angle - width) * pi / 180.),
-        (WINDOW_WIDTH / 2.) + length * sin((angle - width) * pi / 180.),
+        (WINDOW_WIDTH / 2.) + length * cos(rad(angle - width)),
+        (WINDOW_WIDTH / 2.) + length * sin(rad(angle - width)),
         # point 4
-        (WINDOW_WIDTH / 2.) + length * cos((angle + width) * pi / 180.),
-        (WINDOW_WIDTH / 2.) + length * sin((angle + width) * pi / 180.),
+        (WINDOW_WIDTH / 2.) + length * cos(rad(angle + width)),
+        (WINDOW_WIDTH / 2.) + length * sin(rad(angle + width)),
     ]))
 
 
