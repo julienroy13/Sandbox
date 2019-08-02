@@ -87,6 +87,11 @@ if __name__ == "__main__":
         # draws the slower minute bar
         draw_full_rectangle(150, frame)
 
+        glColor3f(1., 0., 1.)
+
+        # draws the slower minute bar
+        draw_full_rectangle(200, frame * 5.)
+
         # draws fps display
         fps_display.draw()
 
