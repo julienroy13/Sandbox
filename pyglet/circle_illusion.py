@@ -27,8 +27,7 @@ class MovingCircle(object):
         self.end2 = np.array([self.traj_center[0] + half_length * cos(rad(self.traj_angle)),
                               self.traj_center[1] + half_length * sin(rad(self.traj_angle))])
 
-        self.v = (self.end2 - self.end1) / 100.
-        print()
+        self.v = 5. * (self.end2 - self.end1) / norm(self.end2 - self.end1)
 
     def draw(self):
         draw_full_circle(int(self.p[0]), int(self.p[1]), self.radius)
@@ -36,6 +35,7 @@ class MovingCircle(object):
     def update_position(self):
         new_p = self.p + self.v
 
+        # if the new position is outside of the limits, inverse the speed direction
         if new_p[0] < min(self.end1[0], self.end2[0]) \
         or new_p[0] > max(self.end1[0], self.end2[0]) \
         or new_p[1] < min(self.end1[1], self.end2[1]) \
@@ -43,7 +43,11 @@ class MovingCircle(object):
             self.v *= -1.
             new_p = self.p + self.v
 
+        # update position
         self.p = new_p
+
+        # update speed (inversely proportional to distance with closest boundary)
+        self.v = (min(norm(self.p - self.end1), norm(self.p - self.end2)) / 100. + 2.) * self.v / norm(self.v)
 
 
 def draw_full_circle(x, y, radius):
@@ -110,9 +114,10 @@ if __name__ == "__main__":
 
         # draws the moving circles
         glColor3f(1., 1., 1.)
-        for ball in balls:
-            ball.update_position()
-            ball.draw()
+        for i, ball in enumerate(balls):
+            if i * 18.5 < t:
+                ball.update_position()
+                ball.draw()
 
         # draws the bars
         glColor3f(0., 0., 0.)
