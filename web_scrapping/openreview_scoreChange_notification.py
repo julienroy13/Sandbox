@@ -74,7 +74,7 @@ while True:
         if "Official Blind Review" in note.content['title']:
             my_submission_reviews[note.content['title']] = [note.content['rating'], wrap(note.content['review'], width=150)]
 
-    logger.info(f"Just checked on the reviews in forum {my_submission_forum}")
+    logger.info(f"Just checked forum {my_submission_forum}")
 
     # loading previous reviews
 
