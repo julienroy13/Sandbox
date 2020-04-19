@@ -2,6 +2,7 @@ import numpy as np
 from itertools import product
 import matplotlib.pyplot as plt
 import seaborn as sns
+sns.set()
 
 
 def mdp_fig2d():
@@ -41,3 +42,5 @@ if __name__ == "__main__":
 
     plt.scatter(vfs[:, 0], vfs[:, 1], s=12)
     plt.scatter(dvfs[:, 0], dvfs[:, 1], c='r')
+
+    plt.show()
