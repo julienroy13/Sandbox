@@ -10,7 +10,7 @@ def mdp_fig2d():
     ''The Value Function Polytope in Reinforcement Learning''
     by Dadashi et al. (2019) https://arxiv.org/abs/1901.11524
     """
-    P = np.array([[[0.7, 0.3], [0.2, 0.8]],
+    P = np.array([[[0.70, 0.30], [0.20, 0.80]],  # shape: (A, S, S')
                   [[0.99, 0.01], [0.99, 0.01]]])
     R = np.array(([[-0.45, -0.1],
                    [0.5, 0.5]]))
@@ -18,8 +18,8 @@ def mdp_fig2d():
 
 
 def solve_mdp(P, R, gamma, policies):
-    ppi = np.einsum('kij,lik->lij', P, policies)
-    rpi = np.einsum('ij,kij->ki', R, policies)
+    ppi = np.einsum('kij,lik->lij', P, policies)  # shapes: P:(A,S,S'), policies:(N,S,A), P_pi:(N,S,S')
+    rpi = np.einsum('ij,kij->ki', R, policies)  # shapes: R:(S,A), policies:(N,S,A), R_pi:(N,S)
     return np.linalg.solve(np.eye(R.shape[0]) - gamma * ppi, rpi)
 
 
