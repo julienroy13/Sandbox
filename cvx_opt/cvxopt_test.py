@@ -1,16 +1,13 @@
+from cvxopt import matrix, solvers
+import numpy as np
+
+
+# =======================================
 # LINKS to documentation:
 # - https://cvxopt.org/
 # - https://cvxopt.org/examples/tutorial/lp.html
 # - https://cvxopt.org/userguide/coneprog.html#linear-programming
-# example mdp: https://github.com/pierrelux/vfpolytope/blob/master/polytope.ipynb
 
-# Goal: put the LP presented in p.18 of Pierre-Luc's notes so that it can be solved by cvxopt solvers
-
-from cvxopt import matrix, solvers
-import numpy as np
-from cvx_opt.mdp_example import mdp_fig2d
-
-# =======================================
 # EXAMPLE
 #
 #Procedure:
@@ -35,16 +32,24 @@ from cvx_opt.mdp_example import mdp_fig2d
 #
 # sol = solvers.lp(c, A, b)
 # print([f"{x:.2f}" for x in sol['x']])
-
-
 # =======================================
-# LP for Value Iteration
 
-P, R, discount = mdp_fig2d()
+# GOAL: Solve the mdp below using cvxopt solver on the LP formulation presented in p.18 of Pierre-Luc's notes
+# example mdp: https://github.com/pierrelux/vfpolytope/blob/master/polytope.ipynb
+
+def mdp_fig2d():
+    """ Figure 2 d) of
+    ''The Value Function Polytope in Reinforcement Learning''
+    by Dadashi et al. (2019) https://arxiv.org/abs/1901.11524
+    """
+    P = np.array([[[0.70, 0.30], [0.20, 0.80]],  # shape: (A, S, S')
+                  [[0.99, 0.01], [0.99, 0.01]]])
+    R = np.array(([[-0.45, -0.1],
+                   [0.5, 0.5]]))
+    return P, R, 0.9
+
+P, R, discount = mdp_fig2d()  # Shape of P:(A,S,S'), Shape of R:(S,A)
 p0 = np.array([0.5, 0.5])
-
-# P is of shape (2,2,2): 1st dim = states, 2nd dim = actions, 3rd dim = next states
-# R is of shape (2,2): 1st dim = states, 2nd dim = actions
 
 # We want to solve this MDP by finding the optimal value function
 # This problem can be formulated as a Linear Program of the form:
@@ -93,4 +98,4 @@ def test_putterman_bound(v):
 
 vtest = vstar + 2.
 print("Putterman bound demo:\n",
-      vtest >= test_putterman_bound(vstar))
+      vtest >= test_putterman_bound(vtest))
