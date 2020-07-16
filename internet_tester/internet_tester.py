@@ -5,16 +5,18 @@ import time
 import os
 import sys
 
+
 def create_logger(name, loglevel, logfile):
     logger = logging.getLogger(name)
     logger.setLevel(loglevel)
     formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - {} - %(message)s'.format(name),
-                                  datefmt='%m/%d/%Y %H:%M:%S',)
+                                  datefmt='%m/%d/%Y %H:%M:%S', )
     for handler in [logging.FileHandler(logfile, mode='w'), logging.StreamHandler(stream=sys.stdout)]:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
     return logger
+
 
 def internet_on():
     try:
@@ -23,14 +25,12 @@ def internet_on():
     except Exception:
         return False
 
+
 def bool_to_internet(state):
-    if state == True:
-        return "ON"
-    else:
-        return "OFF"
+    return "ON" if state == True else "OFF"
+
 
 if __name__ == '__main__':
-    os.mkdir("ConnTests")
     today = datetime.datetime.today().strftime('%Y-%m-%d-%H-%M')
     logger = create_logger("LOGGER", loglevel=logging.INFO, logfile=os.path.join("ConnTests", f"{today}.txt"))
 
@@ -49,12 +49,12 @@ if __name__ == '__main__':
 
             # Connection is back ON
             if connection_state == True:
-                logger.info("Connection is back on!")
-                start = time.time()
+                logger.info(f"Connection is back ON. Downtime: {(time.time() - start):.2f}s")
 
             # Connection is back OFF
             else:
-                logger.info(f"Connection has died... connection time: {(time.time() - start):.2f}s")
+                logger.info(f"Connection has been LOST.")
+                start = time.time()
 
         # Prints the connection_state every minute if nothing has changed
         else:
