@@ -11,6 +11,7 @@ import torchvision
 
 from utils import *
 from vae_model import VAE
+from ae_model import AE
 from data.GMIX.gmix_dataset import GMIXdataset
 from misc import wandb_watch, standardize
 
@@ -42,7 +43,7 @@ def get_main_args(overwritten_args=None):
 
     # alfred's arguments
 
-    parser.add_argument('--alg_name', type=str, default='vae', choices=['vae'])
+    parser.add_argument('--alg_name', type=str, default='vae', choices=['vae', 'ae'])
     parser.add_argument('--task_name', type=str, default="gmix_3", choices=['mnist', 'gmix_1', 'gmix_3'])
     parser.add_argument("--desc", type=str, default="", help="Description of the experiment to be run")
     parser.add_argument("--seed", default=1, type=int, help="Random seed")
@@ -166,14 +167,16 @@ def main(config, dir_tree=None, logger=None, pbar="default_pbar"):
     # Agent
 
     if config.alg_name == "vae":
-        vae = VAE(x_dim=eval_x.shape[1], config=config, logger=logger)
+        algorithm = VAE(x_dim=eval_x.shape[1], config=config, logger=logger)
+    elif config.alg_name == "ae":
+        algorithm = AE(x_dim=eval_x.shape[1], config=config, logger=logger)
     else:
         raise NotImplementedError
 
     # Recorder
 
     os.makedirs(dir_tree.recorders_dir, exist_ok=True)
-    train_recorder = Recorder(vae.metrics_to_record)
+    train_recorder = Recorder(algorithm.metrics_to_record)
 
     # Wandb
 
@@ -191,13 +194,13 @@ def main(config, dir_tree=None, logger=None, pbar="default_pbar"):
         wandb = NOP()
         wandb_save_dir = None
 
-    wandb_watch(wandb, [vae])
+    wandb_watch(wandb, [algorithm])
 
     # First evaluation before initiating training
     # Set aside a fixed set of z's (to evaluate generation) and x's (to evaluate reconstruction)
 
-    eval_z = vae.model.prior.sample(sample_shape=(n_eval_generations,)).detach()
-    evaluation_step(vae, eval_z, eval_x, config.task_name, save_path=dir_tree.seed_dir / "eval_imgs" / f"Epoch0")
+    eval_z = algorithm.model.prior.sample(sample_shape=(n_eval_generations,)).detach()
+    evaluation_step(algorithm, eval_z, eval_x, config.task_name, save_path=dir_tree.seed_dir / "eval_imgs" / f"Epoch0")
 
     # Training loop
 
@@ -213,7 +216,7 @@ def main(config, dir_tree=None, logger=None, pbar="default_pbar"):
 
         for (batch_data, batch_labels) in data_loader:  # TODO: deal with batch_labels later (should not even be returned by __getitem__() for unlabeled datasets)
 
-            new_recordings = vae.update_parameters(batch_data, update_i)
+            new_recordings = algorithm.update_parameters(batch_data, update_i)
 
             # Save loss recordings
 
@@ -225,7 +228,7 @@ def main(config, dir_tree=None, logger=None, pbar="default_pbar"):
             # Save plots and models
 
             if update_i % config.steps_bw_save == 0:
-                save(vae, train_recorder, dir_tree, logger)
+                save(algorithm, train_recorder, dir_tree, logger)
 
             # Decide whether to continue training
 
@@ -254,13 +257,13 @@ def main(config, dir_tree=None, logger=None, pbar="default_pbar"):
 
         if update_i - last_eval_step > config.steps_bw_eval:
             logger.info("Saving plots for visualising reconstruction and generation performance.")
-            evaluation_step(vae, eval_z, eval_x, config.task_name, save_path=dir_tree.seed_dir / "eval_imgs" / f"Epoch{epoch_i}")
+            evaluation_step(algorithm, eval_z, eval_x, config.task_name, save_path=dir_tree.seed_dir / "eval_imgs" / f"Epoch{epoch_i}")
             last_eval_step = update_i
 
     # Final evaluation and save
 
-    evaluation_step(vae, eval_z, eval_x, config.task_name, save_path=dir_tree.seed_dir / "eval_imgs" / f"Epoch{epoch_i}")
-    save(vae, train_recorder, dir_tree, logger)
+    evaluation_step(algorithm, eval_z, eval_x, config.task_name, save_path=dir_tree.seed_dir / "eval_imgs" / f"Epoch{epoch_i}")
+    save(algorithm, train_recorder, dir_tree, logger)
 
     # finishes logging before exiting training script
     wandb.join()
@@ -272,12 +275,12 @@ def save(model, train_recorder, dir_tree, logger):
     model.save_model(path=dir_tree.seed_dir, logger=logger)
 
 
-def evaluation_step(vae, eval_z, eval_x, task_name, save_path):
+def evaluation_step(algorithm, eval_z, eval_x, task_name, save_path):
     with torch.no_grad():
-        generated_x = vae.model.decode(eval_z)
+        generated_x = algorithm.model.decode(eval_z)
 
-        encoded_z, _, _ = vae.model.encode(eval_x)
-        reconstructed_x = vae.model.decode(encoded_z)
+        encoded_z, _, _ = algorithm.model.encode(eval_x)
+        reconstructed_x = algorithm.model.decode(encoded_z)
 
     if task_name == "mnist":
         eval_plot_mnist(x=eval_x, x_hat=reconstructed_x, x_new=generated_x, save_path=save_path)

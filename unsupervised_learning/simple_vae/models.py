@@ -40,6 +40,38 @@ class MLP(nn.Module):
         return x
 
 
+class simple_AE_model(nn.Module):
+    def __init__(self, x_dim, hidden_dims, z_dim, logger=None):
+        """
+        A simple AE that uses MLP based encoder and decoder.
+        It uses tanh() activations at the end of the encoder to be able to sample from a uniform
+        """
+        super().__init__()
+        self.z_dim = z_dim
+
+        # Instantiate the models
+        self.encoder = MLP(input_dim=x_dim, hidden_dims=hidden_dims, output_dim=z_dim, output_act=nn.Tanh,
+                           logger=logger, name="Encoder")
+        self.decoder = MLP(input_dim=z_dim, hidden_dims=hidden_dims[::-1], output_dim=x_dim, output_act=nn.Identity,
+                           logger=logger, name="Decoder")
+
+        # Instantiate the prior
+        self.prior = torch.distributions.uniform.Uniform(
+            low=torch.FloatTensor([-1.] * z_dim),
+            high=torch.FloatTensor([1.] * z_dim)
+        )
+
+    def encode(self, x):
+        return self.encoder(x), None, None
+
+    def decode(self, z):
+        return self.decoder(z)
+
+    def sample(self, n_samples):
+        z = self.prior.sample(sample_shape=(n_samples,))
+        return self.decoder(z)
+
+
 class simple_VAE_model(nn.Module):
     def __init__(self, x_dim, hidden_dims, z_dim, logger=None):
         """
